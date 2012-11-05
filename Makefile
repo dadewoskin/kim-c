@@ -1,17 +1,20 @@
 CC = gcc
 LIBS = -lm
-#PLL = 
-PLL = _omp
-FLAGS = -O2 -fopenmp -std=c99 -pedantic
+PROGRAM = kimFE
+LFLAGS = -fopenmp
+CFLAGS = -c -fopenmp
+SOURCES = kimFE.c rhs.c
 DEPS = rhs.h
-OBJ = rhs$(PLL).o kimFE$(PLL).o
+OBJS = $(SOURCES:.c=.o)
 
-kimFE$(PLL): $(OBJ)
-	gcc -o kimFE$(PLL) $(OBJ) $(LIBS) $(FLAGS)
+$(PROGRAM): $(OBJS)
+	$(CC) $(LFLAGS) $(LIBS) $(OBJS) -o $(PROGRAM)
 
-#rhs$(PLL).o: $(DEPS)
-#kimFE$(PLL).o: $(DEPS)
-$(OBJ).o: $(DEPS)
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) $<
 
 clean:
-	rm kimFE$(PLL) $(OBJ)
+	rm $(OBJS) $(PROGRAM)
+
+tar:
+	tar cfv $(PROGRAM).tar *.c *.h Makefile
