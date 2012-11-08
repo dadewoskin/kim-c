@@ -1,8 +1,8 @@
-CC = gcc
+CC = icc
 #LIBS = -lm
 PROGRAM = kimFE
 LFLAGS = -fopenmp
-CFLAGS = -c -fopenmp
+CFLAGS = -O3 -c -fopenmp
 SOURCES = kimFE.c rhs.c
 DEPS = rhs.h
 OBJS = $(SOURCES:.c=.o)
