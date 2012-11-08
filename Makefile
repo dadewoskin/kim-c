@@ -1,4 +1,4 @@
-CC = icc
+CC = gcc
 #LIBS = -lm
 PROGRAM = kimFE
 LFLAGS = -fopenmp

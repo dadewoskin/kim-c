@@ -1,9 +1,14 @@
-/* simulate one cell using the detailed model from Kim & Forger, MSB 2012 */
-/* rhs contains is the user supplied routines that compute right hand derivatives */
+// PROGRAM: kimFE
+// MODEL: Kim & Forger, MSB 2012 single cell circadian clock model
+// METHOD: solved using forward Euler method - OPENMP version
+
+// INPUT: 1 argument = number of threads to use
+// OUTPUT: text file with time series for all variables
+// FILES: rhs contains user supplied routines that compute right hand derivatives (Eulers method)
+
 #include <stdio.h> 
 #include <math.h> 
 #include <stdlib.h>
-//#include "nrutil.h"
 #include "rhs.h"
 #include "omp.h"
 #include <time.h> 
@@ -11,6 +16,7 @@
 
 int main(int argc, char *argv[])
 {
+	/* Read in number of threads to use */
 	int n_th;
 	if (argc != 2){
 		printf("usage: %s num_threads\n",argv[0]);
@@ -19,208 +25,204 @@ int main(int argc, char *argv[])
 	else {
 		n_th = atoi(argv[1]);
 	} 
-	int nvar = 180; /* number of variables
 
 	/* Set initial conditions */
-	float GR = 0.787955;
-	float G = 0.210048;
-	float GrR = 0.558565;
-	float Gr = 0.416217;
-	float GcR = 0.804404;
-	float Gc = 0.193886;
-	float GBR = 0.39359;
-	float GB = 0.599965;
-	float GBRb = 0.404247;
-	float GBb = 0.589308;
-	float MnPo = 4.18947;
-	float McPo = 0.579108;
-	float MnPt = 8.34963;
-	float McPt = 1.41168;
-	float MnRt = 12.3735;
-	float McRt = 4.47054;
-	float MnRev = 31.869;
-	float McRev = 161.144;
-	float MnRo = 3.76085;
-	float McRo = 1.09547;
-	float MnB = 35.1842;
-	float McB = 8.56043;
-	float MnNp = 0.520367;
-	float McNp = 0.25596;
-	float B = 23.7741;
-	float Cl = 48.0977;
-	float BC = 6.5815;
-	float cyrev = 123.95;
-	float revn = 467.844;
-	float cyrevg = 0.193289;
-	float revng = 58.2391;
-	float cyrevgp = 0.0397137;
-	float revngp = 19.0662;
-	float cyrevp = 0.11012;
-	float revnp = 67.6175;
-	float gto = 1.13837;
-	float x00001 = 0.342061;
-	float x00011 = 8.17977;
-	float x00100 = 50.5794;
-	float x00110 = 3.08486;
-	float x00200 = 0.0985802;
-	float x00210 = 1.30846;
-	float x01000 = 41.1658;
-	float x01010 = 0.0156084;
-	float x01011 = 8.72089;
-	float x02000 = 46.5721;
-	float x02010 = 0.0031953;
-	float x02011 = 1.36799;
-	float x10000 = 0.422898;
-	float x10100 = 1.09254;
-	float x20000 = 0.00181722;
-	float x20010 = 5.19698e-05;
-	float x20011 = 0.00512223;
-	float x20100 = 0.106575;
-	float x20110 = 0.000833073;
-	float x20111 = 0.0566636;
-	float x21000 = 0.00329174;
-	float x21010 = 1.4996e-05;
-	float x21011 = 0.00543134;
-	float x21100 = 0.0876909;
-	float x21110 = 0.000333744;
-	float x21111 = 0.0548927;
-	float x22000 = 0.00348546;
-	float x22010 = 1.54312e-05;
-	float x22011 = 0.00510457;
-	float x22100 = 0.0938758;
-	float x22110 = 0.000353611;
-	float x22111 = 0.0535918;
-	float x30000 = 0.914365;
-	float x30100 = 0.664039;
-	float x30200 = 0.0226162;
-	float x30300 = 0.0241531;
-	float x40000 = 0.00356643;
-	float x40010 = 1.94469e-05;
-	float x40011 = 0.000959363;
-	float x40100 = 0.258442;
-	float x40110 = 0.000985386;
-	float x40111 = 0.0249991;
-	float x40200 = 0.000157103;
-	float x40210 = 1.1242e-05;
-	float x40211 = 0.00132337;
-	float x40300 = 0.0105914;
-	float x40310 = 0.00023062;
-	float x40311 = 0.025311;
-	float x41000 = 0.00390694;
-	float x41010 = 1.34882e-05;
-	float x41011 = 0.000809309;
-	float x41100 = 0.124712;
-	float x41110 = 0.000416813;
-	float x41111 = 0.0148919;
-	float x41200 = 0.000188833;
-	float x41210 = 1.79979e-06;
-	float x41211 = 0.00109293;
-	float x41300 = 0.00584769;
-	float x41310 = 4.35837e-05;
-	float x41311 = 0.0166107;
-	float x42000 = 0.00428454;
-	float x42010 = 1.47716e-05;
-	float x42011 = 0.00086132;
-	float x42100 = 0.137696;
-	float x42110 = 0.000459811;
-	float x42111 = 0.0160349;
-	float x42200 = 0.0002068;
-	float x42210 = 1.94018e-06;
-	float x42211 = 0.0011516;
-	float x42300 = 0.00644626;
-	float x42310 = 4.76349e-05;
-	float x42311 = 0.0177021;
-	float x50000 = 0.00569806;
-	float x50010 = 0.000190832;
-	float x50011 = 0.0566834;
-	float x50100 = 0.0287569;
-	float x50110 = 0.000413832;
-	float x50111 = 0.0494651;
-	float x50200 = 0.00414505;
-	float x50210 = 0.000386223;
-	float x50211 = 0.124464;
-	float x50300 = 0.00740796;
-	float x50310 = 0.000654378;
-	float x50311 = 0.104089;
-	float x51000 = 0.00666974;
-	float x51010 = 2.54221e-05;
-	float x51011 = 0.00484524;
-	float x51100 = 0.0828541;
-	float x51110 = 0.000294564;
-	float x51111 = 0.0323573;
-	float x51200 = 0.0012142;
-	float x51210 = 1.1508e-05;
-	float x51211 = 0.00976858;
-	float x51300 = 0.0087474;
-	float x51310 = 7.98494e-05;
-	float x51311 = 0.0607878;
-	float x52000 = 0.00706385;
-	float x52010 = 2.64292e-05;
-	float x52011 = 0.00442251;
-	float x52100 = 0.0852703;
-	float x52110 = 0.000300906;
-	float x52111 = 0.0301143;
-	float x52200 = 0.00132641;
-	float x52210 = 1.12497e-05;
-	float x52211 = 0.00878991;
-	float x52300 = 0.0091505;
-	float x52310 = 7.78605e-05;
-	float x52311 = 0.055586;
-	float x60000 = 0.000792825;
-	float x60010 = 2.57804e-05;
-	float x60011 = 0.00334582;
-	float x60100 = 0.0274125;
-	float x60110 = 0.000385498;
-	float x60111 = 0.0589937;
-	float x60200 = 0.000125512;
-	float x60210 = 4.99769e-05;
-	float x60211 = 0.00735186;
-	float x60300 = 0.00550233;
-	float x60310 = 0.000631987;
-	float x60311 = 0.12768;
-	float x61000 = 0.00252101;
-	float x61010 = 1.00779e-05;
-	float x61011 = 0.00248103;
-	float x61100 = 0.0581233;
-	float x61110 = 0.000207429;
-	float x61111 = 0.0239137;
-	float x61200 = 0.000305307;
-	float x61210 = 4.90217e-06;
-	float x61211 = 0.00521949;
-	float x61300 = 0.00753943;
-	float x61310 = 6.39585e-05;
-	float x61311 = 0.0471435;
-	float x62000 = 0.00259772;
-	float x62010 = 1.01709e-05;
-	float x62011 = 0.00224807;
-	float x62100 = 0.0602479;
-	float x62110 = 0.000213449;
-	float x62111 = 0.0225783;
-	float x62200 = 0.000320067;
-	float x62210 = 4.60372e-06;
-	float x62211 = 0.004701;
-	float x62300 = 0.00797183;
-	float x62310 = 6.35261e-05;
-	float x62311 = 0.0440794;
+	double GR = 0.787955;
+	double G = 0.210048;
+	double GrR = 0.558565;
+	double Gr = 0.416217;
+	double GcR = 0.804404;
+	double Gc = 0.193886;
+	double GBR = 0.39359;
+	double GB = 0.599965;
+	double GBRb = 0.404247;
+	double GBb = 0.589308;
+	double MnPo = 4.18947;
+	double McPo = 0.579108;
+	double MnPt = 8.34963;
+	double McPt = 1.41168;
+	double MnRt = 12.3735;
+	double McRt = 4.47054;
+	double MnRev = 31.869;
+	double McRev = 161.144;
+	double MnRo = 3.76085;
+	double McRo = 1.09547;
+	double MnB = 35.1842;
+	double McB = 8.56043;
+	double MnNp = 0.520367;
+	double McNp = 0.25596;
+	double B = 23.7741;
+	double Cl = 48.0977;
+	double BC = 6.5815;
+	double cyrev = 123.95;
+	double revn = 467.844;
+	double cyrevg = 0.193289;
+	double revng = 58.2391;
+	double cyrevgp = 0.0397137;
+	double revngp = 19.0662;
+	double cyrevp = 0.11012;
+	double revnp = 67.6175;
+	double gto = 1.13837;
+	double x00001 = 0.342061;
+	double x00011 = 8.17977;
+	double x00100 = 50.5794;
+	double x00110 = 3.08486;
+	double x00200 = 0.0985802;
+	double x00210 = 1.30846;
+	double x01000 = 41.1658;
+	double x01010 = 0.0156084;
+	double x01011 = 8.72089;
+	double x02000 = 46.5721;
+	double x02010 = 0.0031953;
+	double x02011 = 1.36799;
+	double x10000 = 0.422898;
+	double x10100 = 1.09254;
+	double x20000 = 0.00181722;
+	double x20010 = 5.19698e-05;
+	double x20011 = 0.00512223;
+	double x20100 = 0.106575;
+	double x20110 = 0.000833073;
+	double x20111 = 0.0566636;
+	double x21000 = 0.00329174;
+	double x21010 = 1.4996e-05;
+	double x21011 = 0.00543134;
+	double x21100 = 0.0876909;
+	double x21110 = 0.000333744;
+	double x21111 = 0.0548927;
+	double x22000 = 0.00348546;
+	double x22010 = 1.54312e-05;
+	double x22011 = 0.00510457;
+	double x22100 = 0.0938758;
+	double x22110 = 0.000353611;
+	double x22111 = 0.0535918;
+	double x30000 = 0.914365;
+	double x30100 = 0.664039;
+	double x30200 = 0.0226162;
+	double x30300 = 0.0241531;
+	double x40000 = 0.00356643;
+	double x40010 = 1.94469e-05;
+	double x40011 = 0.000959363;
+	double x40100 = 0.258442;
+	double x40110 = 0.000985386;
+	double x40111 = 0.0249991;
+	double x40200 = 0.000157103;
+	double x40210 = 1.1242e-05;
+	double x40211 = 0.00132337;
+	double x40300 = 0.0105914;
+	double x40310 = 0.00023062;
+	double x40311 = 0.025311;
+	double x41000 = 0.00390694;
+	double x41010 = 1.34882e-05;
+	double x41011 = 0.000809309;
+	double x41100 = 0.124712;
+	double x41110 = 0.000416813;
+	double x41111 = 0.0148919;
+	double x41200 = 0.000188833;
+	double x41210 = 1.79979e-06;
+	double x41211 = 0.00109293;
+	double x41300 = 0.00584769;
+	double x41310 = 4.35837e-05;
+	double x41311 = 0.0166107;
+	double x42000 = 0.00428454;
+	double x42010 = 1.47716e-05;
+	double x42011 = 0.00086132;
+	double x42100 = 0.137696;
+	double x42110 = 0.000459811;
+	double x42111 = 0.0160349;
+	double x42200 = 0.0002068;
+	double x42210 = 1.94018e-06;
+	double x42211 = 0.0011516;
+	double x42300 = 0.00644626;
+	double x42310 = 4.76349e-05;
+	double x42311 = 0.0177021;
+	double x50000 = 0.00569806;
+	double x50010 = 0.000190832;
+	double x50011 = 0.0566834;
+	double x50100 = 0.0287569;
+	double x50110 = 0.000413832;
+	double x50111 = 0.0494651;
+	double x50200 = 0.00414505;
+	double x50210 = 0.000386223;
+	double x50211 = 0.124464;
+	double x50300 = 0.00740796;
+	double x50310 = 0.000654378;
+	double x50311 = 0.104089;
+	double x51000 = 0.00666974;
+	double x51010 = 2.54221e-05;
+	double x51011 = 0.00484524;
+	double x51100 = 0.0828541;
+	double x51110 = 0.000294564;
+	double x51111 = 0.0323573;
+	double x51200 = 0.0012142;
+	double x51210 = 1.1508e-05;
+	double x51211 = 0.00976858;
+	double x51300 = 0.0087474;
+	double x51310 = 7.98494e-05;
+	double x51311 = 0.0607878;
+	double x52000 = 0.00706385;
+	double x52010 = 2.64292e-05;
+	double x52011 = 0.00442251;
+	double x52100 = 0.0852703;
+	double x52110 = 0.000300906;
+	double x52111 = 0.0301143;
+	double x52200 = 0.00132641;
+	double x52210 = 1.12497e-05;
+	double x52211 = 0.00878991;
+	double x52300 = 0.0091505;
+	double x52310 = 7.78605e-05;
+	double x52311 = 0.055586;
+	double x60000 = 0.000792825;
+	double x60010 = 2.57804e-05;
+	double x60011 = 0.00334582;
+	double x60100 = 0.0274125;
+	double x60110 = 0.000385498;
+	double x60111 = 0.0589937;
+	double x60200 = 0.000125512;
+	double x60210 = 4.99769e-05;
+	double x60211 = 0.00735186;
+	double x60300 = 0.00550233;
+	double x60310 = 0.000631987;
+	double x60311 = 0.12768;
+	double x61000 = 0.00252101;
+	double x61010 = 1.00779e-05;
+	double x61011 = 0.00248103;
+	double x61100 = 0.0581233;
+	double x61110 = 0.000207429;
+	double x61111 = 0.0239137;
+	double x61200 = 0.000305307;
+	double x61210 = 4.90217e-06;
+	double x61211 = 0.00521949;
+	double x61300 = 0.00753943;
+	double x61310 = 6.39585e-05;
+	double x61311 = 0.0471435;
+	double x62000 = 0.00259772;
+	double x62010 = 1.01709e-05;
+	double x62011 = 0.00224807;
+	double x62100 = 0.0602479;
+	double x62110 = 0.000213449;
+	double x62111 = 0.0225783;
+	double x62200 = 0.000320067;
+	double x62210 = 4.60372e-06;
+	double x62211 = 0.004701;
+	double x62300 = 0.00797183;
+	double x62310 = 6.35261e-05;
+	double x62311 = 0.0440794;
 	///////////////////////////
-	float GR_dot, G_dot, GrR_dot, Gr_dot, GcR_dot, Gc_dot, GBR_dot, GB_dot, GBRb_dot, GBb_dot, MnPo_dot, McPo_dot, MnPt_dot, McPt_dot, MnRt_dot, McRt_dot, MnRev_dot, McRev_dot, MnRo_dot, McRo_dot, MnB_dot, McB_dot, MnNp_dot, McNp_dot, B_dot, Cl_dot, BC_dot, cyrev_dot, revn_dot, cyrevg_dot, revng_dot, cyrevgp_dot, revngp_dot, cyrevp_dot, revnp_dot, gto_dot, x00001_dot, x00011_dot, x00100_dot, x00110_dot, x00200_dot, x00210_dot, x01000_dot, x01010_dot, x01011_dot, x02000_dot, x02010_dot, x02011_dot, x10000_dot, x10100_dot, x20000_dot, x20010_dot, x20011_dot, x20100_dot, x20110_dot, x20111_dot, x21000_dot, x21010_dot, x21011_dot, x21100_dot, x21110_dot, x21111_dot, x22000_dot, x22010_dot, x22011_dot, x22100_dot, x22110_dot, x22111_dot, x30000_dot, x30100_dot, x30200_dot, x30300_dot, x40000_dot, x40010_dot, x40011_dot, x40100_dot, x40110_dot, x40111_dot, x40200_dot, x40210_dot, x40211_dot, x40300_dot, x40310_dot, x40311_dot, x41000_dot, x41010_dot, x41011_dot, x41100_dot, x41110_dot, x41111_dot, x41200_dot, x41210_dot, x41211_dot, x41300_dot, x41310_dot, x41311_dot, x42000_dot, x42010_dot, x42011_dot, x42100_dot, x42110_dot, x42111_dot, x42200_dot, x42210_dot, x42211_dot, x42300_dot, x42310_dot, x42311_dot, x50000_dot, x50010_dot, x50011_dot, x50100_dot, x50110_dot, x50111_dot, x50200_dot, x50210_dot, x50211_dot, x50300_dot, x50310_dot, x50311_dot, x51000_dot, x51010_dot, x51011_dot, x51100_dot, x51110_dot, x51111_dot, x51200_dot, x51210_dot, x51211_dot, x51300_dot, x51310_dot, x51311_dot, x52000_dot, x52010_dot, x52011_dot, x52100_dot, x52110_dot, x52111_dot, x52200_dot, x52210_dot, x52211_dot, x52300_dot, x52310_dot, x52311_dot, x60000_dot, x60010_dot, x60011_dot, x60100_dot, x60110_dot, x60111_dot, x60200_dot, x60210_dot, x60211_dot, x60300_dot, x60310_dot, x60311_dot, x61000_dot, x61010_dot, x61011_dot, x61100_dot, x61110_dot, x61111_dot, x61200_dot, x61210_dot, x61211_dot, x61300_dot, x61310_dot, x61311_dot, x62000_dot, x62010_dot, x62011_dot, x62100_dot, x62110_dot, x62111_dot, x62200_dot, x62210_dot, x62211_dot, x62300_dot, x62310_dot, x62311_dot;
+	double GR_dot, G_dot, GrR_dot, Gr_dot, GcR_dot, Gc_dot, GBR_dot, GB_dot, GBRb_dot, GBb_dot, MnPo_dot, McPo_dot, MnPt_dot, McPt_dot, MnRt_dot, McRt_dot, MnRev_dot, McRev_dot, MnRo_dot, McRo_dot, MnB_dot, McB_dot, MnNp_dot, McNp_dot, B_dot, Cl_dot, BC_dot, cyrev_dot, revn_dot, cyrevg_dot, revng_dot, cyrevgp_dot, revngp_dot, cyrevp_dot, revnp_dot, gto_dot, x00001_dot, x00011_dot, x00100_dot, x00110_dot, x00200_dot, x00210_dot, x01000_dot, x01010_dot, x01011_dot, x02000_dot, x02010_dot, x02011_dot, x10000_dot, x10100_dot, x20000_dot, x20010_dot, x20011_dot, x20100_dot, x20110_dot, x20111_dot, x21000_dot, x21010_dot, x21011_dot, x21100_dot, x21110_dot, x21111_dot, x22000_dot, x22010_dot, x22011_dot, x22100_dot, x22110_dot, x22111_dot, x30000_dot, x30100_dot, x30200_dot, x30300_dot, x40000_dot, x40010_dot, x40011_dot, x40100_dot, x40110_dot, x40111_dot, x40200_dot, x40210_dot, x40211_dot, x40300_dot, x40310_dot, x40311_dot, x41000_dot, x41010_dot, x41011_dot, x41100_dot, x41110_dot, x41111_dot, x41200_dot, x41210_dot, x41211_dot, x41300_dot, x41310_dot, x41311_dot, x42000_dot, x42010_dot, x42011_dot, x42100_dot, x42110_dot, x42111_dot, x42200_dot, x42210_dot, x42211_dot, x42300_dot, x42310_dot, x42311_dot, x50000_dot, x50010_dot, x50011_dot, x50100_dot, x50110_dot, x50111_dot, x50200_dot, x50210_dot, x50211_dot, x50300_dot, x50310_dot, x50311_dot, x51000_dot, x51010_dot, x51011_dot, x51100_dot, x51110_dot, x51111_dot, x51200_dot, x51210_dot, x51211_dot, x51300_dot, x51310_dot, x51311_dot, x52000_dot, x52010_dot, x52011_dot, x52100_dot, x52110_dot, x52111_dot, x52200_dot, x52210_dot, x52211_dot, x52300_dot, x52310_dot, x52311_dot, x60000_dot, x60010_dot, x60011_dot, x60100_dot, x60110_dot, x60111_dot, x60200_dot, x60210_dot, x60211_dot, x60300_dot, x60310_dot, x60311_dot, x61000_dot, x61010_dot, x61011_dot, x61100_dot, x61110_dot, x61111_dot, x61200_dot, x61210_dot, x61211_dot, x61300_dot, x61310_dot, x61311_dot, x62000_dot, x62010_dot, x62011_dot, x62100_dot, x62110_dot, x62111_dot, x62200_dot, x62210_dot, x62211_dot, x62300_dot, x62310_dot, x62311_dot;
 
 	time_t start; 
 	start=time(NULL); 
 	
-	float t1=0; /* initial time */
-	float t2=500; /* end time */
-	float t=t1;
-	float step_size=0.0001; /* step size (in hours) */
+	double t1=0; /* initial time */
+	double t2=500; /* end time */
+	double t=t1;
 	int nstep=(t2-t1)/step_size; /* number of identical steps to take */
 
 	int i,j,t_step;
-	float record_size=0.1; /* record data to file every record_size hours (if step_size <= record_size)*/
+	double record_size=0.1; /* record data to file every record_size hours (if step_size <= record_size)*/
 	int record; /* record data to file every record time steps */
 	if (step_size<=record_size) record = round(record_size/step_size);
 	else record = 1;
-
-	float *results[nvar][nstep/record];
 
 //////////////////////// For Data Output /////////////////////////////
 	char filename1[50]; 
@@ -970,731 +972,459 @@ int main(int argc, char *argv[])
 					x62311_dot=rhsx62311(gto, x00011, x00110, x00210, x02010, x02011, x42311, x60310, x60311, x62111, x62211, x62310, x62311);
 				}
 			}
-			#pragma omp barrier
 			#pragma omp sections
 			{
 				#pragma omp section
 				{
 					GR += step_size*GR_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					G += step_size*G_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					GrR += step_size*GrR_dot; /* Explicit Forward Euler method */
+					Gr += step_size*Gr_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
-					Gr += step_size*Gr_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					GcR += step_size*GcR_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					Gc += step_size*Gc_dot; /* Explicit Forward Euler method */
 				}
-	#pragma omp section
+				#pragma omp section
 				{
 					GBR += step_size*GBR_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					GB += step_size*GB_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					GBRb += step_size*GBRb_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					GBb += step_size*GBb_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnPo += step_size*MnPo_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McPo += step_size*McPo_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnPt += step_size*MnPt_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McPt += step_size*McPt_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnRt += step_size*MnRt_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McRt += step_size*McRt_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnRev += step_size*MnRev_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McRev += step_size*McRev_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnRo += step_size*MnRo_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McRo += step_size*McRo_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnB += step_size*MnB_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McB += step_size*McB_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					MnNp += step_size*MnNp_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					McNp += step_size*McNp_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					B += step_size*B_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					Cl += step_size*Cl_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					BC += step_size*BC_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					cyrev += step_size*cyrev_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					revn += step_size*revn_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					cyrevg += step_size*cyrevg_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					revng += step_size*revng_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					cyrevgp += step_size*cyrevgp_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					revngp += step_size*revngp_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					cyrevp += step_size*cyrevp_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					revnp += step_size*revnp_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					gto += step_size*gto_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x00001 += step_size*x00001_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x00011 += step_size*x00011_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x00100 += step_size*x00100_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x00110 += step_size*x00110_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x00200 += step_size*x00200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x00210 += step_size*x00210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x01000 += step_size*x01000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x01010 += step_size*x01010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x01011 += step_size*x01011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x02000 += step_size*x02000_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x02010 += step_size*x02010_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x02011 += step_size*x02011_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x10000 += step_size*x10000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x10100 += step_size*x10100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x20000 += step_size*x20000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x20010 += step_size*x20010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x20011 += step_size*x20011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x20100 += step_size*x20100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x20110 += step_size*x20110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x20111 += step_size*x20111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x21000 += step_size*x21000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x21010 += step_size*x21010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x21011 += step_size*x21011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x21100 += step_size*x21100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x21110 += step_size*x21110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x21111 += step_size*x21111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x22000 += step_size*x22000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x22010 += step_size*x22010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x22011 += step_size*x22011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x22100 += step_size*x22100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x22110 += step_size*x22110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x22111 += step_size*x22111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x30000 += step_size*x30000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x30100 += step_size*x30100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x30200 += step_size*x30200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x30300 += step_size*x30300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40000 += step_size*x40000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40010 += step_size*x40010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40011 += step_size*x40011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40100 += step_size*x40100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40110 += step_size*x40110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40111 += step_size*x40111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40200 += step_size*x40200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40210 += step_size*x40210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40211 += step_size*x40211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40300 += step_size*x40300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x40310 += step_size*x40310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x40311 += step_size*x40311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41000 += step_size*x41000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41010 += step_size*x41010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41011 += step_size*x41011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41100 += step_size*x41100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41110 += step_size*x41110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41111 += step_size*x41111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41200 += step_size*x41200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41210 += step_size*x41210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41211 += step_size*x41211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41300 += step_size*x41300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x41310 += step_size*x41310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x41311 += step_size*x41311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42000 += step_size*x42000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42010 += step_size*x42010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42011 += step_size*x42011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42100 += step_size*x42100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42110 += step_size*x42110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42111 += step_size*x42111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42200 += step_size*x42200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42210 += step_size*x42210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42211 += step_size*x42211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42300 += step_size*x42300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x42310 += step_size*x42310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x42311 += step_size*x42311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50000 += step_size*x50000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50010 += step_size*x50010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50011 += step_size*x50011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50100 += step_size*x50100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50110 += step_size*x50110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50111 += step_size*x50111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50200 += step_size*x50200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50210 += step_size*x50210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50211 += step_size*x50211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50300 += step_size*x50300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x50310 += step_size*x50310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x50311 += step_size*x50311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51000 += step_size*x51000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51010 += step_size*x51010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51011 += step_size*x51011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51100 += step_size*x51100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51110 += step_size*x51110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51111 += step_size*x51111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51200 += step_size*x51200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51210 += step_size*x51210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51211 += step_size*x51211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51300 += step_size*x51300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x51310 += step_size*x51310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x51311 += step_size*x51311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52000 += step_size*x52000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52010 += step_size*x52010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52011 += step_size*x52011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52100 += step_size*x52100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52110 += step_size*x52110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52111 += step_size*x52111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52200 += step_size*x52200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52210 += step_size*x52210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52211 += step_size*x52211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52300 += step_size*x52300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x52310 += step_size*x52310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x52311 += step_size*x52311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60000 += step_size*x60000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60010 += step_size*x60010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60011 += step_size*x60011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60100 += step_size*x60100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60110 += step_size*x60110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60111 += step_size*x60111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60200 += step_size*x60200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60210 += step_size*x60210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60211 += step_size*x60211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60300 += step_size*x60300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x60310 += step_size*x60310_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x60311 += step_size*x60311_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61000 += step_size*x61000_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x61010 += step_size*x61010_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61011 += step_size*x61011_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x61100 += step_size*x61100_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61110 += step_size*x61110_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x61111 += step_size*x61111_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61200 += step_size*x61200_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x61210 += step_size*x61210_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61211 += step_size*x61211_dot; /* Explicit Forward Euler method */
-				}
-	#pragma omp section
-				{
 					x61300 += step_size*x61300_dot; /* Explicit Forward Euler method */
 				}
 	#pragma omp section
 				{
 					x61310 += step_size*x61310_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x61311 += step_size*x61311_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62000 += step_size*x62000_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62010 += step_size*x62010_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62011 += step_size*x62011_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62100 += step_size*x62100_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62110 += step_size*x62110_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62111 += step_size*x62111_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62200 += step_size*x62200_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62210 += step_size*x62210_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62211 += step_size*x62211_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62300 += step_size*x62300_dot; /* Explicit Forward Euler method */
 				}
 				#pragma omp section
 				{
 					x62310 += step_size*x62310_dot; /* Explicit Forward Euler method */
-				}
-				#pragma omp section
-				{
 					x62311 += step_size*x62311_dot; /* Explicit Forward Euler method */
 				}
 			}
-			#pragma omp barrier
 		}
 
 		if (t_step%record == 0) {
