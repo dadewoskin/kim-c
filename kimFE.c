@@ -1,4 +1,5 @@
-/* simulate one cell using the equations from Diekman & Forger */
+/* simulate one cell using the detailed model from Kim & Forger, MSB 2012 */
+/* rhs contains is the user supplied routines that compute right hand derivatives */
 #include <stdio.h> 
 #include <math.h> 
 #include <stdlib.h>
@@ -9,7 +10,15 @@
 #include <string.h> 
 
 int main(int argc, char *argv[])
-{ 
+{
+	int n_th;
+	if (argc != 2){
+		printf("usage: %s num_threads\n",argv[0]);
+		return -1;
+	}
+	else {
+		n_th = atoi(argv[1]);
+	} 
 	int nvar = 180; /* number of variables
 
 	/* Set initial conditions */
@@ -213,14 +222,11 @@ int main(int argc, char *argv[])
 
 	float *results[nvar][nstep/record];
 
-	/* rhs contains is the user supplied routines that compute right hand derivatives */
-	
-
 //////////////////////// For Data Output /////////////////////////////
 	char filename1[50]; 
 	FILE *outfi1; 
 
-	sprintf(filename1,"./Results/Kim.txt"); /* records output every record timesteps */
+	sprintf(filename1,"./Results/kim%d.txt", n_th); /* records output every record timesteps */
 	remove(filename1); 
 	if ((outfi1 = fopen(filename1, "w")) == NULL) { 
 	  printf("can not open output file"); 
@@ -228,12 +234,13 @@ int main(int argc, char *argv[])
 
 	/* Output initial conditions */
 	//Header
+	fprintf(outfi1, "number of threads: %d\n%f", n_th, t);
 	fprintf(outfi1, "t\t GR\t G\t GrR\t Gr\t GcR\t Gc\t GBR\t GB\t GBRb\t GBb\t MnPo\t McPo\t MnPt\t McPt\t MnRt\t McRt\t MnRev\t McRev\t MnRo\t McRo\t MnB\t McB\t MnNp\t McNp\t B\t Cl\t BC\t cyrev\t revn\t cyrevg\t revng\t cyrevgp\t revngp\t cyrevp\t revnp\t gto\t x00001\t x00011\t x00100\t x00110\t x00200\t x00210\t x01000\t x01010\t x01011\t x02000\t x02010\t x02011\t x10000\t x10100\t x20000\t x20010\t x20011\t x20100\t x20110\t x20111\t x21000\t x21010\t x21011\t x21100\t x21110\t x21111\t x22000\t x22010\t x22011\t x22100\t x22110\t x22111\t x30000\t x30100\t x30200\t x30300\t x40000\t x40010\t x40011\t x40100\t x40110\t x40111\t x40200\t x40210\t x40211\t x40300\t x40310\t x40311\t x41000\t x41010\t x41011\t x41100\t x41110\t x41111\t x41200\t x41210\t x41211\t x41300\t x41310\t x41311\t x42000\t x42010\t x42011\t x42100\t x42110\t x42111\t x42200\t x42210\t x42211\t x42300\t x42310\t x42311\t x50000\t x50010\t x50011\t x50100\t x50110\t x50111\t x50200\t x50210\t x50211\t x50300\t x50310\t x50311\t x51000\t x51010\t x51011\t x51100\t x51110\t x51111\t x51200\t x51210\t x51211\t x51300\t x51310\t x51311\t x52000\t x52010\t x52011\t x52100\t x52110\t x52111\t x52200\t x52210\t x52211\t x52300\t x52310\t x52311\t x60000\t x60010\t x60011\t x60100\t x60110\t x60111\t x60200\t x60210\t x60211\t x60300\t x60310\t x60311\t x61000\t x61010\t x61011\t x61100\t x61110\t x61111\t x61200\t x61210\t x61211\t x61300\t x61310\t x61311\t x62000\t x62010\t x62011\t x62100\t x62110\t x62111\t x62200\t x62210\t x62211\t x62300\t x62310\t x62311\n");
 	//Initial data
-	fprintf(outfi1, "%f", t);
 	fprintf(outfi1, "\t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f \t%f\n", GR, G, GrR, Gr, GcR, Gc, GBR, GB, GBRb, GBb, MnPo, McPo, MnPt, McPt, MnRt, McRt, MnRev, McRev, MnRo, McRo, MnB, McB, MnNp, McNp, B, Cl, BC, cyrev, revn, cyrevg, revng, cyrevgp, revngp, cyrevp, revnp, gto, x00001, x00011, x00100, x00110, x00200, x00210, x01000, x01010, x01011, x02000, x02010, x02011, x10000, x10100, x20000, x20010, x20011, x20100, x20110, x20111, x21000, x21010, x21011, x21100, x21110, x21111, x22000, x22010, x22011, x22100, x22110, x22111, x30000, x30100, x30200, x30300, x40000, x40010, x40011, x40100, x40110, x40111, x40200, x40210, x40211, x40300, x40310, x40311, x41000, x41010, x41011, x41100, x41110, x41111, x41200, x41210, x41211, x41300, x41310, x41311, x42000, x42010, x42011, x42100, x42110, x42111, x42200, x42210, x42211, x42300, x42310, x42311, x50000, x50010, x50011, x50100, x50110, x50111, x50200, x50210, x50211, x50300, x50310, x50311, x51000, x51010, x51011, x51100, x51110, x51111, x51200, x51210, x51211, x51300, x51310, x51311, x52000, x52010, x52011, x52100, x52110, x52111, x52200, x52210, x52211, x52300, x52310, x52311, x60000, x60010, x60011, x60100, x60110, x60111, x60200, x60210, x60211, x60300, x60310, x60311, x61000, x61010, x61011, x61100, x61110, x61111, x61200, x61210, x61211, x61300, x61310, x61311, x62000, x62010, x62011, x62100, x62110, x62111, x62200, x62210, x62211, x62300, x62310, x62311);
 	
 /////////////////////// Run computation //////////////////////////////
+	omp_set_num_threads(n_th);
 	for (t_step=1; t_step<=nstep; t_step++) {
 		t=t_step*step_size;
 
@@ -1696,12 +1703,13 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-    fclose(outfi1); 
 //////////////////////////////////////////////////////////////////////
 
     time_t end; 
     end=time(NULL); 
     printf("Runtime: %f\n",difftime(end,start)/60); 
 
+    fprintf(outfi1,"\nRuntime: %f\n",difftime(end,start)/60); 
+    fclose(outfi1); 
 	return 1;
 } 
